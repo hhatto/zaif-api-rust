@@ -32,7 +32,9 @@ impl Api {
     fn get(&self) -> reqwest::Result<String> {
         let mut resp = reqwest::get(self.uri.as_str())?;
 
-        assert!(resp.status().is_success());
+        if !resp.status().is_success() {
+            return Ok(resp.status().canonical_reason().expect("fail").to_string());
+        }
         resp.text()
     }
 
