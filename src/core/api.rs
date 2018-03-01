@@ -33,9 +33,14 @@ impl Api {
         let mut resp = reqwest::get(self.uri.as_str())?;
 
         if !resp.status().is_success() {
-            return Ok(resp.status().canonical_reason().expect("fail").to_string());
+            let reason = resp.status().canonical_reason().expect("fail").to_string();
+            let status_code = resp.status().as_u16();
+            let m = format!("{} {}", status_code, reason).to_string();
+            println!("{}", m);
+            Ok(m)
+        } else {
+            resp.text()
         }
-        resp.text()
     }
 
     fn post(&self) -> reqwest::Result<String> {
@@ -53,12 +58,19 @@ impl Api {
         let uri = "https://api.zaif.jp/tapi";
         let mut res = client.post(uri).headers(headers).body(body).send().unwrap();
 
-        assert!(res.status().is_success());
+        if !res.status().is_success() {
+            let reason = res.status().canonical_reason().expect("fail").to_string();
+            let status_code = res.status().as_u16();
+            println!("{} {}", status_code, reason);
+            return res.text();
+        }
+
         let response_body = res.text().unwrap();
         let v: Value = serde_json::from_str(response_body.as_str()).unwrap();
         if v["success"].as_i64().unwrap() == 0 {
             let msg = v["error"].as_str().unwrap();
-            panic!(msg.to_string());
+            println!("{}", msg);
+            return Ok(msg.to_string());
         }
 
         Ok(response_body)
